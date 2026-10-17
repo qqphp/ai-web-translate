@@ -6,6 +6,7 @@ dist/
 release/
 .env
 .env.*
+env.local
 !.env.example
 *.local
 npm-debug.log*

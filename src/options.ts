@@ -1,7 +1,6 @@
 import { translate } from "./shared/api";
 import { getSettings, saveSettings, validateBaseUrl } from "./shared/storage";
 import { fetchModels } from "./shared/models";
-import { MODEL_PROVIDERS, providerForBaseUrl } from "./shared/providers";
 import { localeNames, setLocale, t } from "./shared/i18n";
 import { LANGUAGE_OPTIONS, normalizeLanguage } from "./shared/languages";
 import { addTranslationHistory, getTranslationHistory } from "./shared/translation-history";
@@ -20,7 +19,7 @@ let translationPending = false;
 let translationError = "";
 let translationRequestId = 0;
 
-type IconName = "settings" | "info" | "profile" | "plus" | "save" | "test" | "trash" | "check" | "close" | "model" | "language" | "gift" | "sparkles" | "selection" | "bilingual" | "globe" | "shield" | "focus" | "accurate" | "flow" | "natural" | "translate" | "copy" | "refresh" | "clear" | "history" | "download";
+type IconName = "settings" | "info" | "profile" | "plus" | "save" | "test" | "trash" | "check" | "close" | "model" | "language" | "gift" | "sparkles" | "selection" | "bilingual" | "globe" | "shield" | "focus" | "accurate" | "flow" | "natural" | "translate" | "copy" | "refresh" | "clear" | "history" | "download" | "brand" | "blog" | "code" | "external";
 
 const iconPaths: Record<IconName, string> = {
   settings: '<path d="M4 7h10M4 12h16M16 7h4M4 17h4M10 17h10"/><circle cx="12" cy="7" r="2"/><circle cx="8" cy="17" r="2"/>',
@@ -49,7 +48,11 @@ const iconPaths: Record<IconName, string> = {
   refresh: '<path d="M20 7V3m0 0h-4M20 3l-3 3a7 7 0 0 0-11 2M4 17v4m0 0h4m-4 0 3-3a7 7 0 0 0 11-2"/>',
   clear: '<path d="M4 7h16M9 7V4h6v3M7 7l1 13h8l1-13"/>',
   history: '<path d="M4 12a8 8 0 1 0 2-5.3L4 9M4 4v5h5M12 8v5l3 2"/>',
-  download: '<path d="M12 3v12m0 0 4-4m-4 4-4-4M5 19h14"/>'
+  download: '<path d="M12 3v12m0 0 4-4m-4 4-4-4M5 19h14"/>',
+  brand: '<path d="M3 5h8v6H3zM7 2v12M13 21l4-11 4 11M14.5 17h5M3 18h7l-2-2M21 6h-7l2 2"/>',
+  blog: '<path d="M5 3h10l4 4v14H5zM14 3v5h5M8 12h8M8 16h5"/>',
+  code: '<path d="m8 7-5 5 5 5m8-10 5 5-5 5M14 4l-4 16"/>',
+  external: '<path d="M14 4h6v6m0-6L10 14M10 4H5a1 1 0 0 0-1 1v14a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-5"/>'
 };
 
 const icon = (name: IconName, className = "icon") => `<svg class="${className}" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${iconPaths[name]}</svg>`;
@@ -74,11 +77,6 @@ function displayLanguage(value: string, includeAuto = false): string {
 function languageOptions(selected: string, includeAuto: boolean): string {
   const auto = includeAuto ? `<option value="auto" ${selected === "auto" ? "selected" : ""}>${t("autoDetect")}</option>` : "";
   return auto + LANGUAGE_OPTIONS.map((option) => `<option value="${option.value}" ${selected === option.value ? "selected" : ""}>${escape(displayLanguage(option.value))}</option>`).join("");
-}
-
-function providerOptions(baseUrl: string): string {
-  const selected = providerForBaseUrl(baseUrl);
-  return MODEL_PROVIDERS.map((provider) => `<option value="${provider.id}" ${provider.id === selected ? "selected" : ""}>${escape(provider.name)}</option>`).join("");
 }
 
 function modelOptions(selected: string): string {
@@ -190,6 +188,10 @@ function renderAbout(): string {
       <div class="about-mark">${icon("sparkles", "about-mark-icon")}</div>
       <div><span class="eyebrow">${t("aboutEyebrow")}</span><h2>${t("aboutTitle")}</h2><p>${t("aboutIntro")}</p></div>
     </div>
+    <div class="about-links">
+      <a class="about-link" href="https://qqphp.com/" target="_blank" rel="noopener noreferrer"><span class="about-link-icon">${icon("blog")}</span><span class="about-link-copy"><strong>${t("technicalBlog")}</strong><span dir="ltr">qqphp.com</span></span>${icon("external", "external-icon")}</a>
+      <a class="about-link" href="https://github.com/qqphp/ai-web-translate" target="_blank" rel="noopener noreferrer"><span class="about-link-icon">${icon("code")}</span><span class="about-link-copy"><strong>${t("sourceCode")}</strong><span dir="ltr">qqphp/ai-web-translate</span></span>${icon("external", "external-icon")}</a>
+    </div>
     <div class="feature-grid">${features.map(([name, title, description]) => `<article class="feature-card"><span class="feature-icon">${icon(name)}</span><div><h3>${t(title)}</h3><p>${t(description)}</p></div></article>`).join("")}</div>
     <div class="about-closing">${icon("language", "closing-icon")}<div><strong>${t("aboutClosingTitle")}</strong><p>${t("aboutClosing")}</p></div></div>
   </section>`;
@@ -199,14 +201,14 @@ function renderSettings(profile: Profile): string {
   return `<section class="profiles" role="tabpanel" aria-labelledby="settings-tab"><div class="section-heading"><div><span class="eyebrow">${t("profilesEyebrow")}</span><h2>${t("profiles")}</h2></div><span class="profile-count">${settings.profiles.length}</span></div><div class="profile-list">${settings.profiles.length ? settings.profiles.map(renderProfile).join("") : `<p class="empty-state">${t("noProfiles")}</p>`}</div><button class="button secondary full-width" id="add" type="button">${buttonContent("plus", t("add"))}</button></section>
     <section class="profile-editor"><div class="section-heading"><div><span class="eyebrow">${editing ? t("editingEyebrow") : t("createEyebrow")}</span><h2>${editing ? t("editProfile") : t("newProfile")}</h2></div>${icon(editing ? "profile" : "plus", "heading-icon")}</div><form id="profile-form">
       <label>${requiredLabel(t("name"))}<input name="name" required value="${escape(profile.name)}" /></label>
-      <label>${requiredLabel(t("provider"))}<select id="provider" name="provider" required>${providerOptions(profile.baseUrl)}</select></label>
-      <label>${requiredLabel(t("baseUrl"))}<input name="baseUrl" required placeholder="https://api.example.com/v1" value="${escape(profile.baseUrl)}" /></label>
+      <label>${requiredLabel(t("baseUrl"))}<input name="baseUrl" required aria-describedby="base-url-hint" placeholder="https://api.openai.com/v1" value="${escape(profile.baseUrl)}" /><small class="form-hint" id="base-url-hint">${t("baseUrlHint")}</small></label>
       <label>${requiredLabel(t("apiKey"))}<input name="apiKey" type="password" required autocomplete="off" value="${escape(profile.apiKey)}" /></label>
-      <label>${requiredLabel(t("model"))}<span class="model-field"><select id="available-models" name="model" required aria-label="${escape(t("model"))}">${modelOptions(profile.model)}</select><button class="button secondary model-fetch" type="button" id="fetch-models" disabled>${buttonContent("download", t("fetchModels"))}</button></span><small class="form-hint" id="model-fetch-status"></small></label>
+      <label>${requiredLabel(t("model"))}<span class="model-field"><select id="available-models" name="model" required aria-label="${escape(t("model"))}">${modelOptions(profile.model)}</select><button class="button secondary model-fetch" type="button" id="fetch-models" disabled>${buttonContent("download", t("fetchModels"))}</button></span><small class="form-hint" id="model-fetch-status" role="status"></small></label>
       <div class="form-row"><label>${t("source")}<select id="sourceLang" class="form-select" name="sourceLanguage">${languageOptions(profile.sourceLanguage, true)}</select></label>
       <label>${t("target")}<select id="targetLang" class="form-select" name="targetLanguage">${languageOptions(profile.targetLanguage, false)}</select></label></div>
       <label>${t("mode")}<select name="mode"><option value="replace" ${profile.mode === "replace" ? "selected" : ""}>${t("replace")}</option><option value="preserve" ${profile.mode === "preserve" ? "selected" : ""}>${t("preserve")}</option></select></label>
       <div class="form-actions"><button class="button primary" type="submit">${buttonContent("save", t("save"))}</button><button class="button secondary" type="button" id="test">${buttonContent("test", t("test"))}</button>${editing ? `<button class="button danger" type="button" id="delete">${buttonContent("trash", t("remove"))}</button>` : ""}</div>
+      <div class="credential-notice">${icon("shield")}<div><p>${t("credentialPrivacy")}</p><p class="store-review">${t("storeReview")}</p></div></div>
     </form></section>`;
 }
 
@@ -274,7 +276,7 @@ function render() {
   document.title = t("title");
   app.innerHTML = `
     <header>
-      <div class="header-row"><div class="brand"><span class="brand-icon">${icon("language")}</span><div><h1>${t("title")}</h1><p>${t("brandTagline")}</p></div></div><div class="locale-card"><span class="locale-card-icon">${icon("globe")}</span><label class="locale" for="ui-locale"><span class="locale-copy"><strong>${t("uiLanguage")}</strong><small>language</small></span><select id="ui-locale">${uiLanguageOptions(settings.uiLocale)}</select></label></div></div>
+      <div class="header-row"><div class="brand"><span class="brand-icon">${icon("brand")}</span><div><h1>${t("title")}</h1><p>${t("brandTagline")}</p></div></div><div class="locale-card"><span class="locale-card-icon">${icon("globe")}</span><label class="locale" for="ui-locale"><span class="locale-copy"><strong>${t("uiLanguage")}</strong><small>language</small></span><select id="ui-locale">${uiLanguageOptions(settings.uiLocale)}</select></label></div></div>
     </header>
     ${renderTabs()}
     ${activeTab === "about" ? renderAbout() : activeTab === "translate" ? renderTranslator() : renderSettings(profile)}`;
@@ -286,32 +288,38 @@ function render() {
   document.querySelectorAll<HTMLButtonElement>(".profile").forEach((button) => button.onclick = async () => { editing = settings.profiles.find((item) => item.id === button.dataset.id) ?? null; if (editing) { settings.activeProfileId = editing.id; useProfileLanguages(editing); await saveSettings(settings); await notifyProfileChange(); } render(); });
   document.querySelector("#add")!.addEventListener("click", () => { editing = null; render(); });
   const form = document.querySelector<HTMLFormElement>("#profile-form")!;
-  const provider = document.querySelector<HTMLSelectElement>("#provider")!;
   const baseUrlInput = form.elements.namedItem("baseUrl") as HTMLInputElement;
   const apiKeyInput = form.elements.namedItem("apiKey") as HTMLInputElement;
   const modelSelect = form.elements.namedItem("model") as HTMLSelectElement;
   const fetchModelsButton = document.querySelector<HTMLButtonElement>("#fetch-models")!;
   const modelStatus = document.querySelector<HTMLElement>("#model-fetch-status")!;
-  const syncFetchModelsButton = () => { fetchModelsButton.disabled = !apiKeyInput.value.trim(); };
-  apiKeyInput.addEventListener("input", syncFetchModelsButton); syncFetchModelsButton();
-  provider.addEventListener("change", () => {
-    const selected = MODEL_PROVIDERS.find((item) => item.id === provider.value);
-    if (selected?.baseUrl) baseUrlInput.value = selected.baseUrl;
+  let fetchingModels = false;
+  let credentialsVersion = 0;
+  const syncFetchModelsButton = () => { fetchModelsButton.disabled = fetchingModels || !baseUrlInput.value.trim() || !apiKeyInput.value.trim(); };
+  const credentialsChanged = () => {
+    credentialsVersion++;
     modelSelect.innerHTML = modelOptions(""); modelStatus.textContent = "";
-  });
+    syncFetchModelsButton();
+  };
+  baseUrlInput.addEventListener("input", credentialsChanged);
+  apiKeyInput.addEventListener("input", credentialsChanged);
+  syncFetchModelsButton();
   fetchModelsButton.addEventListener("click", async () => {
-    if (!apiKeyInput.value.trim()) return;
+    if (fetchingModels || !baseUrlInput.value.trim() || !apiKeyInput.value.trim()) return;
     const error = validateBaseUrl(baseUrlInput.value.trim());
     if (error) { await showDialog(localizeUrlError(error)); return; }
-    fetchModelsButton.disabled = true; modelStatus.textContent = t("fetchingModels");
+    const requestVersion = credentialsVersion;
+    fetchingModels = true; syncFetchModelsButton(); modelStatus.textContent = t("fetchingModels");
     try {
       const models = await fetchModels(baseUrlInput.value.trim(), apiKeyInput.value.trim());
+      if (!form.isConnected || requestVersion !== credentialsVersion) return;
       const previousModel = modelSelect.value;
       modelSelect.innerHTML = `<option value="">${escape(t("selectModel"))}</option>${models.map((model) => `<option value="${escape(model)}">${escape(model)}</option>`).join("")}`;
       modelSelect.value = models.includes(previousModel) ? previousModel : "";
       modelStatus.textContent = format(t("modelsFetched"), { count: models.length });
-    } catch (caught) { modelStatus.textContent = caught instanceof Error ? caught.message : t("modelFetchFailed");
-    } finally { syncFetchModelsButton(); }
+    } catch (caught) {
+      if (form.isConnected && requestVersion === credentialsVersion) modelStatus.textContent = caught instanceof Error ? caught.message : t("modelFetchFailed");
+    } finally { fetchingModels = false; syncFetchModelsButton(); }
   });
   form.onsubmit = async (event) => {
     event.preventDefault(); const next = profileFromForm(event.currentTarget as HTMLFormElement, { ...profile, id: editing?.id ?? profile.id });

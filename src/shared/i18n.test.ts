@@ -30,4 +30,15 @@ describe("UI locale selection", () => {
       expect(contentMessages[locale].partialCompletion).toContain("{failed}");
     }
   });
+
+  it("localizes the API guidance, credential notices, and about links in every locale", () => {
+    for (const values of Object.values(localeMessages)) {
+      for (const key of ["baseUrl", "baseUrlHint", "credentialPrivacy", "storeReview", "technicalBlog", "sourceCode"]) {
+        expect(values[key]).toBeTruthy();
+        if (values !== localeMessages.en) expect(values[key]).not.toBe(localeMessages.en[key]);
+      }
+      expect(values.baseUrlHint).toContain("https://api.openai.com/v1");
+      expect(values.baseUrlHint).toContain("https://example.com/openai/v1");
+    }
+  });
 });

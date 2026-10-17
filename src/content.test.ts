@@ -44,6 +44,23 @@ describe("page translation entry", () => {
     expect(document.querySelector(".llmwt-progress-percent")?.textContent).toBe("100%");
   });
 
+  it("shows the actual request error when page segments fail and clears it for the next task", async () => {
+    await import("./content");
+    const handler = addListener.mock.calls[0][0] as (message: unknown) => void;
+    const node = { id: "node-0", text: "Skip to main content" };
+    handler({ kind: "preparePage", mode: "replace", maxRequests: 200 });
+    handler({ kind: "taskStarted", taskId: "failed-page", total: 1, mode: "replace", taskType: "initial" });
+    handler({ kind: "nodeFailed", taskId: "failed-page", node, error: "API request failed (401). Check your profile and API service." });
+    handler({ kind: "nodeFailed", taskId: "old-page", node, error: "Stale error" });
+    handler({ kind: "taskFinished", summary: { taskId: "failed-page", total: 1, succeeded: 0, failed: [node], cancelled: false } });
+    expect(document.querySelector('.llmwt-panel-error[role="alert"]')?.textContent).toContain("API request failed (401)");
+    expect(document.querySelector(".llmwt-panel-message")?.textContent).toContain("Skip to main content");
+    handler({ kind: "taskStarted", taskId: "next-page", total: 1, mode: "replace", taskType: "retry" });
+    handler({ kind: "taskFinished", summary: { taskId: "next-page", total: 1, succeeded: 1, failed: [], cancelled: false } });
+    expect(document.querySelector(".llmwt-panel-error")).toBeNull();
+    handler({ kind: "restorePage" });
+  });
+
   it("inserts preserved translations and restores the original page", async () => {
     const paragraph = document.querySelector("p")!;
     paragraph.style.color = "rgb(12, 34, 56)"; paragraph.style.fontFamily = "Georgia"; paragraph.style.fontSize = "19px"; paragraph.style.fontStyle = "normal"; paragraph.style.fontWeight = "700"; paragraph.style.lineHeight = "28px";

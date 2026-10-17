@@ -55,13 +55,13 @@ npm run build
 - 配置名称
 - OpenAI 兼容 API 的 Base URL，例如 `https://api.example.com/v1`
 - API Key
-- 模型名称
+- 填写 Base URL 和 API Key 后点击“获取模型”，选择必填模型
 - 源语言和目标语言
 - 翻译模式：替换原文或双语对照
 
 Base URL 必须使用 HTTPS；仅 `localhost`、`127.0.0.1` 和 `[::1]` 允许 HTTP。建议先点击“测试连接”，确认连接成功后保存并启用配置。
 
-接口需要兼容 OpenAI 的 `POST /chat/completions` 请求格式。
+官方接口和中转站均可使用，但必须兼容 OpenAI 的 `GET /models` 和 `POST /chat/completions` 格式及 Bearer 鉴权。填写服务商提供的完整 API 前缀，例如 `https://api.openai.com/v1` 或 `https://example.com/openai/v1`；不要填写完整的 `/chat/completions` 请求地址。程序保留路径前缀，不会自动补充 `/v1`。
 
 ### 2. 翻译独立文本
 

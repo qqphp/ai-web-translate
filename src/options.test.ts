@@ -100,21 +100,21 @@ describe("profile connection test", () => {
     expect(set).not.toHaveBeenCalled();
   });
 
-  it("marks all five required profile fields visibly and semantically", async () => {
+  it("marks the four required fields and removes the provider selector", async () => {
     await import("./options");
     await openSettings();
     const form = document.querySelector<HTMLFormElement>("#profile-form")!;
-    expect(Array.from(form.querySelectorAll<HTMLElement>(".required-mark"), (mark) => mark.textContent)).toEqual(["*", "*", "*", "*", "*"]);
-    for (const name of ["name", "provider", "baseUrl", "apiKey", "model"]) {
+    expect(document.querySelector("#provider")).toBeNull();
+    expect(form.elements.namedItem("provider")).toBeNull();
+    expect(Array.from(form.querySelectorAll<HTMLElement>(".required-mark"), (mark) => mark.textContent)).toEqual(["*", "*", "*", "*"]);
+    for (const name of ["name", "baseUrl", "apiKey", "model"]) {
       expect((form.elements.namedItem(name) as HTMLInputElement | HTMLSelectElement).required).toBe(true);
     }
   });
 
-  it("sets a preset Base URL and retrieves models only after an API key is entered", async () => {
+  it("retrieves models only when both the Base URL and API key are nonempty", async () => {
     await import("./options");
     await openSettings();
-    await vi.waitFor(() => expect(document.querySelector("#provider")).not.toBeNull());
-    const provider = document.querySelector<HTMLSelectElement>("#provider")!;
     const form = document.querySelector<HTMLFormElement>("#profile-form")!;
     const baseUrl = form.elements.namedItem("baseUrl") as HTMLInputElement;
     const apiKey = form.elements.namedItem("apiKey") as HTMLInputElement;
@@ -125,9 +125,14 @@ describe("profile connection test", () => {
     expect(model.value).toBe("");
     expect(model.options[0].textContent).toBe("Select a model");
     expect(button.disabled).toBe(true);
-    provider.value = "openai"; provider.dispatchEvent(new Event("change"));
-    expect(baseUrl.value).toBe("https://api.openai.com/v1");
     apiKey.value = "secret"; apiKey.dispatchEvent(new Event("input"));
+    expect(button.disabled).toBe(true);
+    baseUrl.value = "   "; baseUrl.dispatchEvent(new Event("input"));
+    expect(button.disabled).toBe(true);
+    baseUrl.value = " https://api.openai.com/v1 "; baseUrl.dispatchEvent(new Event("input"));
+    apiKey.value = "   "; apiKey.dispatchEvent(new Event("input"));
+    expect(button.disabled).toBe(true);
+    apiKey.value = " secret "; apiKey.dispatchEvent(new Event("input"));
     expect(button.disabled).toBe(false);
     button.click();
     await vi.waitFor(() => expect(fetchModels).toHaveBeenCalledWith("https://api.openai.com/v1", "secret"));
@@ -137,6 +142,119 @@ describe("profile connection test", () => {
     expect(model.value).toBe("");
     availableModels.value = "gpt-4.1"; availableModels.dispatchEvent(new Event("change"));
     expect(model.value).toBe("gpt-4.1");
+    apiKey.value = "another-key"; apiKey.dispatchEvent(new Event("input"));
+    expect(Array.from(model.options, (option) => option.value)).toEqual([""]);
+    expect(document.querySelector("#model-fetch-status")?.textContent).toBe("");
+    baseUrl.value = ""; baseUrl.dispatchEvent(new Event("input"));
+    expect(button.disabled).toBe(true);
+  });
+
+  it("blocks saving and testing without a selected model", async () => {
+    await import("./options");
+    await openSettings();
+    const form = document.querySelector<HTMLFormElement>("#profile-form")!;
+    (form.elements.namedItem("name") as HTMLInputElement).value = "My API";
+    (form.elements.namedItem("baseUrl") as HTMLInputElement).value = "https://relay.example/openai/v1";
+    (form.elements.namedItem("apiKey") as HTMLInputElement).value = "secret";
+    expect((form.elements.namedItem("model") as HTMLSelectElement).validity.valueMissing).toBe(true);
+    (document.querySelector("#test") as HTMLButtonElement).click();
+    form.dispatchEvent(new Event("submit", { cancelable: true, bubbles: true }));
+    await vi.waitFor(() => expect(document.querySelector(".settings-dialog")?.textContent).toContain("model are required"));
+    expect(translate).not.toHaveBeenCalled();
+    expect(set).not.toHaveBeenCalled();
+  });
+
+  it("validates the URL before retrieving models", async () => {
+    await import("./options");
+    await openSettings();
+    const form = document.querySelector<HTMLFormElement>("#profile-form")!;
+    for (const [name, value] of [["baseUrl", "not-a-url"], ["apiKey", "secret"]]) {
+      const input = form.elements.namedItem(name) as HTMLInputElement;
+      input.value = value; input.dispatchEvent(new Event("input"));
+    }
+    (document.querySelector("#fetch-models") as HTMLButtonElement).click();
+    await vi.waitFor(() => expect(document.querySelector(".settings-dialog")?.textContent).toContain("valid absolute URL"));
+    expect(fetchModels).not.toHaveBeenCalled();
+  });
+
+  it.each(["success", "failure"])("ignores stale model request %s after credentials change", async (outcome) => {
+    let resolveRequest!: (models: string[]) => void;
+    let rejectRequest!: (error: Error) => void;
+    fetchModels.mockImplementationOnce(() => new Promise<string[]>((resolve, reject) => { resolveRequest = resolve; rejectRequest = reject; }));
+    await import("./options");
+    await openSettings();
+    const form = document.querySelector<HTMLFormElement>("#profile-form")!;
+    const baseUrl = form.elements.namedItem("baseUrl") as HTMLInputElement;
+    const apiKey = form.elements.namedItem("apiKey") as HTMLInputElement;
+    baseUrl.value = "https://one.example/v1"; baseUrl.dispatchEvent(new Event("input"));
+    apiKey.value = "secret"; apiKey.dispatchEvent(new Event("input"));
+    const button = document.querySelector<HTMLButtonElement>("#fetch-models")!;
+    button.click(); button.click();
+    expect(fetchModels).toHaveBeenCalledOnce();
+    expect(button.disabled).toBe(true);
+    baseUrl.value = "https://two.example/openai/v1"; baseUrl.dispatchEvent(new Event("input"));
+    expect(button.disabled).toBe(true);
+    if (outcome === "success") resolveRequest(["old-service-model"]); else rejectRequest(new Error("Old request failed"));
+    await vi.waitFor(() => expect(button.disabled).toBe(false));
+    expect(Array.from(form.querySelectorAll<HTMLOptionElement>('[name="model"] option'), (option) => option.value)).toEqual([""]);
+    expect(document.querySelector("#model-fetch-status")?.textContent).toBe("");
+    button.click();
+    await vi.waitFor(() => expect(fetchModels).toHaveBeenLastCalledWith("https://two.example/openai/v1", "secret"));
+    await vi.waitFor(() => expect(button.disabled).toBe(false));
+  });
+
+  it("shows model retrieval failures and allows retrying", async () => {
+    fetchModels.mockRejectedValueOnce(new Error("No models are available for this API key."));
+    await import("./options");
+    await openSettings();
+    const form = document.querySelector<HTMLFormElement>("#profile-form")!;
+    for (const [name, value] of [["baseUrl", "https://relay.example/v1"], ["apiKey", "secret"]]) {
+      const input = form.elements.namedItem(name) as HTMLInputElement;
+      input.value = value; input.dispatchEvent(new Event("input"));
+    }
+    const button = document.querySelector<HTMLButtonElement>("#fetch-models")!;
+    button.click();
+    await vi.waitFor(() => expect(document.querySelector("#model-fetch-status")?.textContent).toContain("No models are available"));
+    expect(button.disabled).toBe(false);
+    expect((form.elements.namedItem("model") as HTMLSelectElement).value).toBe("");
+    expect(set).not.toHaveBeenCalled();
+  });
+
+  it("loads and saves an existing profile without fetching models again", async () => {
+    const existing = { id: "one", name: "Existing", baseUrl: "https://relay.example/openai/v1/", apiKey: "secret", model: "existing-model", sourceLanguage: "en", targetLanguage: "zh-CN", mode: "replace" };
+    stored.settings = { activeProfileId: "one", profiles: [existing] };
+    await import("./options");
+    await openSettings();
+    document.querySelector<HTMLButtonElement>(".profile")!.click();
+    await vi.waitFor(() => expect(document.querySelector<HTMLSelectElement>("#available-models")?.value).toBe("existing-model"));
+    const form = document.querySelector<HTMLFormElement>("#profile-form")!;
+    form.requestSubmit();
+    await vi.waitFor(() => expect(document.querySelector(".settings-dialog")?.textContent).toContain("Profile saved"));
+    expect(stored.settings).toMatchObject({ profiles: [existing] });
+    expect(fetchModels).not.toHaveBeenCalled();
+  });
+
+  it("places privacy and store review notices beneath the save actions", async () => {
+    stored.settings = { activeProfileId: null, profiles: [], uiLocale: "zh-CN" };
+    await import("./options");
+    await openSettings();
+    expect(document.querySelector(".form-actions + .credential-notice")?.textContent).toContain("服务密钥仅保存在当前浏览器本地");
+    expect(document.querySelector(".credential-notice")?.textContent).toContain("已通过 Chrome 网上应用店审核");
+    expect(document.querySelector("#base-url-hint")?.textContent).toContain("https://example.com/openai/v1");
+  });
+
+  it("adds accessible blog and source cards immediately below the about hero", async () => {
+    await import("./options");
+    await vi.waitFor(() => expect(document.querySelector("#about-tab")).not.toBeNull());
+    document.querySelector<HTMLButtonElement>("#about-tab")!.click();
+    const links = Array.from(document.querySelectorAll<HTMLAnchorElement>(".about-hero + .about-links a"));
+    expect(links.map((link) => link.href)).toEqual(["https://qqphp.com/", "https://github.com/qqphp/ai-web-translate"]);
+    for (const link of links) {
+      expect(link.target).toBe("_blank");
+      expect(link.rel).toBe("noopener noreferrer");
+      expect(link.querySelector("svg")).not.toBeNull();
+    }
+    expect(document.querySelector(".brand-icon svg")?.innerHTML).not.toContain("circle");
   });
 
   it("switches the active profile with one click", async () => {

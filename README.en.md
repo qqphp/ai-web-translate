@@ -55,13 +55,13 @@ Click the extension icon, open the Settings tab, and provide:
 - Profile name
 - OpenAI-compatible API Base URL, such as `https://api.example.com/v1`
 - API key
-- Model name
+- After entering the Base URL and API key, click Get models and select a required model
 - Source and target languages
 - Translation mode: replace the original or show a bilingual comparison
 
 The Base URL must use HTTPS. HTTP is allowed only for `localhost`, `127.0.0.1`, and `[::1]`. Test the connection before saving and activating a profile.
 
-The service must support the OpenAI-compatible `POST /chat/completions` request format.
+Official APIs and relay services are supported when they implement OpenAI-compatible `GET /models` and `POST /chat/completions` endpoints with Bearer authentication. Enter the full API prefix provided by the service, such as `https://api.openai.com/v1` or `https://example.com/openai/v1`, without the `/chat/completions` suffix. Custom path prefixes are preserved; `/v1` is never added automatically.
 
 ### 2. Translate standalone text
 

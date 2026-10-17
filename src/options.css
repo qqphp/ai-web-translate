@@ -202,6 +202,21 @@ label { display: grid; gap: 6px; color: #475569; font-size: 13px; font-weight: 6
 .about-hero p { max-width: 720px; margin: 8px 0 0; color: #64748b; line-height: 1.7; }
 .about-mark { width: 58px; height: 58px; display: grid; place-items: center; flex: 0 0 auto; border-radius: 18px; color: #fff; background: linear-gradient(145deg, #2563eb, #7c3aed); box-shadow: 0 10px 26px #4f46e52b; }
 .about-mark-icon { width: 31px; height: 31px; }
+.about-links { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin-top: 22px; }
+.about-link { display: flex; align-items: center; gap: 13px; min-width: 0; padding: 19px; border: 1px solid #dbe6fb; border-radius: 15px; background: linear-gradient(120deg, #f0f6ff, #fafbff); color: #1e3a8a; text-decoration: none; transition: border-color .15s, box-shadow .15s; }
+.about-link:nth-child(2) { color: #5b21b6; border-color: #e6def7; background: linear-gradient(120deg, #f6f1ff, #fcfbff); }
+.about-link:hover { border-color: #a5b4fc; box-shadow: 0 5px 16px #6366f115; }
+.about-link:focus-visible { outline: 3px solid #93c5fd; outline-offset: 3px; }
+.about-link-icon { display: grid; place-items: center; flex: 0 0 auto; width: 42px; height: 42px; border-radius: 12px; background: #fff; box-shadow: 0 2px 6px #0f172a08; }
+.about-link-icon .icon { width: 23px; height: 23px; }
+.about-link-copy { display: grid; gap: 5px; min-width: 0; }
+.about-link-copy strong { font-size: 15px; }
+.about-link-copy > span { color: #64748b; font-size: 12px; overflow-wrap: anywhere; text-align: start; }
+.external-icon { width: 17px; height: 17px; flex: 0 0 auto; margin-inline-start: auto; opacity: .65; }
+.credential-notice { display: flex; align-items: flex-start; gap: 10px; padding: 13px 14px; border: 1px solid #dbe8f5; border-radius: 12px; background: #f5f9ff; color: #64748b; font-size: 12px; line-height: 1.7; }
+.credential-notice > .icon { margin-top: 2px; color: #2563eb; }
+.credential-notice p { margin: 0; }
+.credential-notice .store-review { margin-top: 5px; color: #1d4ed8; font-weight: 600; }
 .feature-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 22px; }
 .feature-card { display: flex; align-items: flex-start; gap: 12px; min-height: 96px; padding: 15px; border: 1px solid #e7ebf2; border-radius: 13px; background: #fbfcfe; }
 .feature-icon { width: 36px; height: 36px; display: grid; place-items: center; flex: 0 0 auto; border-radius: 10px; color: #2563eb; background: #eaf2ff; }
@@ -230,12 +245,14 @@ label { display: grid; gap: 6px; color: #475569; font-size: 13px; font-weight: 6
   .model-field { flex-direction: column; }
   .model-fetch { width: 100%; }
   .feature-grid { grid-template-columns: 1fr; }
+  .about-links { grid-template-columns: 1fr; }
   .translator-page { grid-template-columns: 1fr; }
   .translation-history { max-height: none; }
   .history-list { max-height: none; }
 }
 
 @media (max-width: 480px) {
+  .tab { gap: 6px; padding: 10px 8px; font-size: 13px; white-space: nowrap; }
   .brand { align-items: flex-start; }
   .brand-icon { width: 42px; height: 42px; border-radius: 13px; }
   .brand-icon .icon { width: 23px; height: 23px; }

@@ -1,4 +1,5 @@
 import type { PageNode, Profile } from "./types";
+import { apiEndpoint } from "./endpoint";
 
 export const SYSTEM_PROMPT = "Translate the text. Return only the translation, without quotes, labels, notes, or Markdown.";
 
@@ -14,7 +15,7 @@ const translationMessages = (profile: Profile, text: string): ChatMessage[] => [
 ];
 
 function chatRequestBody(profile: Profile, messages: ChatMessage[], stream: boolean): Record<string, unknown> {
-  return { model: profile.model, stream, thinking: { type: "disabled" }, messages };
+  return { model: profile.model, stream, messages };
 }
 
 export function cleanTranslation(value: string): string {
@@ -25,14 +26,13 @@ export function cleanTranslation(value: string): string {
 }
 
 async function chat(profile: Profile, messages: ChatMessage[], signal?: AbortSignal): Promise<string> {
-  const base = profile.baseUrl.endsWith("/") ? profile.baseUrl : `${profile.baseUrl}/`;
   const controller = new AbortController();
   let timedOut = false;
   const abort = () => controller.abort(signal?.reason);
   if (signal?.aborted) abort(); else signal?.addEventListener("abort", abort, { once: true });
   const timeout = setTimeout(() => { timedOut = true; controller.abort(); }, REQUEST_TIMEOUT_MS);
   try {
-    const response = await fetch(new URL("chat/completions", base), {
+    const response = await fetch(apiEndpoint(profile.baseUrl, "chat/completions"), {
       method: "POST",
       signal: controller.signal,
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${profile.apiKey}` },
@@ -62,14 +62,13 @@ export async function translate(profile: Profile, text: string, signal?: AbortSi
 }
 
 export async function translateStreaming(profile: Profile, text: string, onText: (text: string) => void, signal?: AbortSignal): Promise<string> {
-  const base = profile.baseUrl.endsWith("/") ? profile.baseUrl : `${profile.baseUrl}/`;
   const controller = new AbortController();
   let timedOut = false;
   const abort = () => controller.abort(signal?.reason);
   if (signal?.aborted) abort(); else signal?.addEventListener("abort", abort, { once: true });
   const timeout = setTimeout(() => { timedOut = true; controller.abort(); }, REQUEST_TIMEOUT_MS);
   try {
-    const response = await fetch(new URL("chat/completions", base), {
+    const response = await fetch(apiEndpoint(profile.baseUrl, "chat/completions"), {
       method: "POST",
       signal: controller.signal,
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${profile.apiKey}` },
